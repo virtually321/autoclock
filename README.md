@@ -1,1 +1,2 @@
 # autoclock
+判断
