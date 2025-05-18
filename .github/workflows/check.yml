@@ -1,42 +1,42 @@
-name: 精简状态监控系统
+name: 静默状态监控
 on:
   schedule:
-    - cron: '0 21 * * *'  # 北京时间05:00触发
+    - cron: '0 21 * * *'  # 北京时间05:00
   push:
     paths:
       - 'duty'
       - 'leave'
 
 jobs:
-  status-tracker:
+  status-monitor:
     runs-on: ubuntu-latest
     steps:
-    # ===== 1. 代码检出 =====
-    - uses: actions/checkout@v4
-      with:
-        persist-credentials: false
-
-    # ===== 2. 状态生成 =====
-    - name: 生成状态文件
+    # ===== 1. 静默获取状态 =====
+    - name: 获取最新状态
+      id: fetch-status
       run: |
-        # 精简版状态获取逻辑
-        TEMP_FILE=$(mktemp)
-        trap 'rm -f "$TEMP_FILE"' EXIT
-
-        # 带失败回退的请求
-        if ! curl -fsS --retry 3 "https://yasumi.neko7ina.com/" > "$TEMP_FILE"; then
-          echo "::notice:: 使用缓存状态"
-          [ -f status ] && cp status "$TEMP_FILE" || echo 1 > "$TEMP_FILE"
+        # 内存临时存储（不写文件）
+        CURRENT_STATUS=$(curl -fsS --retry 3 "https://yasumi.neko7ina.com/" || echo "error")
+        
+        # 状态校验逻辑
+        if [[ ! "$CURRENT_STATUS" =~ ^[01]$ ]]; then
+          echo "::error:: 状态值异常: $CURRENT_STATUS"
+          exit 1
         fi
 
-        # 二进制状态验证
-        grep -qE '^[01]$' "$TEMP_FILE" || (echo "::error:: 状态值异常"; exit 1)
-        mv -f "$TEMP_FILE" status
+        # 输出供后续步骤使用
+        echo "status=$CURRENT_STATUS" >> $GITHUB_OUTPUT
 
-    # ===== 3. 自动提交 =====
-    - uses: stefanzweifel/git-auto-commit-action@v5
+    # ===== 2. 智能告警模块 ===== (示例)
+    - name: 状态变化通知
+      if: ${{ always() && steps.fetch-status.outputs.status != env.PREV_STATUS }}
+      uses: actions-slack@v3
       with:
-        commit_message: "系统状态更新"
-        file_pattern: 'status'
-        commit_options: '--no-verify'
-        skip_dirty_check: true  # 强制提交
+        payload: |
+          {
+            "text": "🔔 状态变更通知: ${{ steps.fetch-status.outputs.status }}",
+            "channel": "#alerts"
+          }
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        PREV_STATUS: ${{ steps.fetch-status.outputs.status }}  # 实际应持久化存储
