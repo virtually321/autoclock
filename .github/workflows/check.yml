@@ -11,43 +11,61 @@ jobs:
   status-tracker:
     runs-on: ubuntu-latest
     env:
-      TZ: Asia/Shanghai  # 全局时区设置
+      TZ: Asia/Shanghai  # 强制北京时间生效
     steps:
+    # ===== 1. 代码检出 =====
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false  # 安全增强
 
-    # ===== 时间变量设置 =====
-    - name: 设置精确时间
+    # ===== 2. 时间生成 =====
+    - name: 生成时间戳
+      id: timestamp
       run: |
-        # 强制指定时区获取时间
         FULL_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')
-        echo "生成时间：$FULL_TIME"
+        echo "生成时间：$FULL_TIME" | tee time.log
         echo "FULL_TIME=$FULL_TIME" >> $GITHUB_ENV
 
-    # ===== 状态生成核心逻辑 =====
+    # ===== 3. 状态生成 (含网络优化) =====
     - name: 生成状态文件
       run: |
         TEMP_FILE=$(mktemp)
-        
-        if grep -m1 -q "^$(date +%F)" duty; then
-          echo 1 > $TEMP_FILE
-        elif grep -m1 -q "^$(date +%F)" leave; then
-          echo 0 > $TEMP_FILE
-        else
-          curl -fsS --max-time 5 "https://yasumi.neko7ina.com/" > $TEMP_FILE
-          grep -qE '^[01]$' $TEMP_FILE || cp status $TEMP_FILE
+        trap 'rm -f "$TEMP_FILE"' EXIT
+
+        # 带智能重试的网络请求
+        curl -fsS \
+          --retry 3 \              # 最多重试3次
+          --retry-delay 2 \        # 首次重试间隔2秒
+          --retry-max-time 20 \    # 总超时20秒
+          --connect-timeout 5 \    # 连接超时5秒
+          --max-time 10 \          # 单次请求超时10秒
+          --retry-all-errors \     # 对所有错误类型重试
+          "https://yasumi.neko7ina.com/" > "$TEMP_FILE" || {
+          echo "::warning:: API请求失败，保留当前状态"
+          cp status "$TEMP_FILE" 2>/dev/null || echo 1 > "$TEMP_FILE"
+        }
+
+        # 状态格式验证
+        if ! grep -qE '^[01]$' "$TEMP_FILE"; then
+          echo "::error:: 无效状态值: $(cat "$TEMP_FILE")"
+          exit 1
         fi
 
-        mv $TEMP_FILE status
+        mv -f "$TEMP_FILE" status
 
-    # ===== 调试信息输出 =====
-    - name: 验证时间变量
+    # ===== 4. 调试输出 =====
+    - name: 运行诊断
       run: |
-        echo "当前系统时间: $(date)"
-        echo "格式化时间变量: ${{ env.FULL_TIME }}"
-        echo "状态文件内容: $(cat status)"
+        echo "当前系统时间: $(date +'%Y-%m-%d %H:%M:%S%z')"
+        echo "环境变量时间: ${{ env.FULL_TIME }}"
+        echo "最终状态值: $(cat status)"
 
-    # ===== 自动提交 =====
+    # ===== 5. 自动提交 =====
     - uses: stefanzweifel/git-auto-commit-action@v5
       with:
         commit_message: "状态更新 [${{ env.FULL_TIME }}]"
-        file_pattern: 'status'
+        file_pattern: |
+          status
+          time.log
+        force: true
+        branch: ${{ github.ref }}
