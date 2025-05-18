@@ -11,22 +11,23 @@ jobs:
   status-tracker:
     runs-on: ubuntu-latest
     env:
-      TZ: Asia/Shanghai  # 强制北京时间生效
+      TZ: Asia/Shanghai
     steps:
     # ===== 1. 代码检出 =====
     - uses: actions/checkout@v4
       with:
-        persist-credentials: false  # 安全增强
+        persist-credentials: false
 
     # ===== 2. 时间生成 =====
     - name: 生成时间戳
       id: timestamp
       run: |
-        FULL_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')
-        echo "生成时间：$FULL_TIME" | tee time.log
-        echo "FULL_TIME=$FULL_TIME" >> $GITHUB_ENV
+        # 生成紧凑时间格式(月-日 时:分)
+        SHORT_TIME=$(TZ='Asia/Shanghai' date +'%m-%d %H:%M')
+        echo "生成时间：$SHORT_TIME" | tee time.log
+        echo "SHORT_TIME=$SHORT_TIME" >> $GITHUB_ENV
 
-    # ===== 3. 状态生成 (含网络优化) =====
+    # ===== 3. 状态生成 =====
     - name: 生成状态文件
       run: |
         TEMP_FILE=$(mktemp)
@@ -34,12 +35,12 @@ jobs:
 
         # 带智能重试的网络请求
         curl -fsS \
-          --retry 3 \              # 最多重试3次
-          --retry-delay 2 \        # 首次重试间隔2秒
-          --retry-max-time 20 \    # 总超时20秒
-          --connect-timeout 5 \    # 连接超时5秒
-          --max-time 10 \          # 单次请求超时10秒
-          --retry-all-errors \     # 对所有错误类型重试
+          --retry 3 \
+          --retry-delay 2 \
+          --retry-max-time 20 \
+          --connect-timeout 5 \
+          --max-time 10 \
+          --retry-all-errors \
           "https://yasumi.neko7ina.com/" > "$TEMP_FILE" || {
           echo "::warning:: API请求失败，保留当前状态"
           cp status "$TEMP_FILE" 2>/dev/null || echo 1 > "$TEMP_FILE"
@@ -53,17 +54,10 @@ jobs:
 
         mv -f "$TEMP_FILE" status
 
-    # ===== 4. 调试输出 =====
-    - name: 运行诊断
-      run: |
-        echo "当前系统时间: $(date +'%Y-%m-%d %H:%M:%S%z')"
-        echo "环境变量时间: ${{ env.FULL_TIME }}"
-        echo "最终状态值: $(cat status)"
-
-    # ===== 5. 自动提交 =====
+    # ===== 4. 自动提交 =====
     - uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        commit_message: "状态更新 [${{ env.FULL_TIME }}]"
+        commit_message: "✅ 状态更新 ｜ 🕒 ${{ env.SHORT_TIME }}"  # 方案A样式
         file_pattern: |
           status
           time.log
