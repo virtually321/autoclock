@@ -1,21 +1,40 @@
 name: 极简打卡系统
 on: 
   schedule: 
-    - cron: '0 0,8 * * *'  # 北京时间8点/16点
+    - cron: '0 0,8 * * *'     # UTC 0:00（北京时间8:00）、UTC 8:00（北京时间16:00）
+      time_zone: Asia/Shanghai  # 显式声明时区
   push: 
-    paths: [duty, leave]    # 文件变更实时触发
+    paths: 
+      - '**/duty'               # 匹配任意目录下的duty文件
+      - '**/leave'              # 匹配任意目录下的leave文件
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v4  # 检出代码
 
     - name: 生成状态
       run: |
-        # 精准日期匹配 + 实时接口查询
-        grep -qxF "$(date +%F)" duty leave && echo 1 || curl -sf "https://yasumi.neko7ina.com/" > status
+        set -o errexit -o nounset  # 严格模式（捕获未定义变量/命令错误）
+        
+        # 防御性文件检查（确保duty/leave存在，避免grep报错）
+        for file in duty leave; do
+          [ -f "$file" ] || touch "$file"
+        done
+
+        # 精确匹配duty/leave中的今日日期（YYYY-MM-DD）
+        if grep -qxF "$(date +%F)" duty leave; then
+          echo 1 > status  # 存在当日记录 → 标记休息
+        elif curl -sfm5 "https://yasumi.neko7ina.com/" > status; then
+          echo "::info:: 接口返回假期状态"  # 接口成功 → 写入状态
+        else
+          echo "::warning file=status-check.sh::接口超时/错误，默认工作日"
+          echo 0 > status  # 兜底 → 默认工作日
+        fi
 
     - uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        commit_message: "系统自动更新"
+        commit_message: "📅 系统自动更新"
+        file_pattern: status       # 仅提交status文件
+        commit_options: '--allow-empty'  # 允许空提交（避免无变化时报错）
