@@ -1,42 +1,53 @@
-name: 精准状态生成
+name: 精准状态监控
 on:
   schedule:
-    - cron: '0 21 * * *'  # 北京时间05:00
+    - cron: '0 21 * * *'  # 北京时间05:00触发
   push:
     paths:
       - 'duty'
       - 'leave'
 
 jobs:
-  status-generator:
+  status-tracker:
     runs-on: ubuntu-latest
     env:
-      TZ: Asia/Shanghai
+      TZ: Asia/Shanghai  # 全局时区设置
     steps:
     - uses: actions/checkout@v4
 
-    # ===== 精准核心逻辑 =====
-    - name: 生成状态
+    # ===== 时间变量设置 =====
+    - name: 设置精确时间
       run: |
-        TODAY=$(date +"%F")
+        # 强制指定时区获取时间
+        FULL_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M')
+        echo "生成时间：$FULL_TIME"
+        echo "FULL_TIME=$FULL_TIME" >> $GITHUB_ENV
+
+    # ===== 状态生成核心逻辑 =====
+    - name: 生成状态文件
+      run: |
         TEMP_FILE=$(mktemp)
         
-        # 文件优先策略
-        if grep -m1 -q "^$TODAY$" duty; then
+        if grep -m1 -q "^$(date +%F)" duty; then
           echo 1 > $TEMP_FILE
-        elif grep -m1 -q "^$TODAY$" leave; then
+        elif grep -m1 -q "^$(date +%F)" leave; then
           echo 0 > $TEMP_FILE
         else
-          # 直接使用API返回值
           curl -fsS --max-time 5 "https://yasumi.neko7ina.com/" > $TEMP_FILE
           grep -qE '^[01]$' $TEMP_FILE || cp status $TEMP_FILE
         fi
 
-        # 原子替换
         mv $TEMP_FILE status
 
-    # ===== 安全提交 =====
+    # ===== 调试信息输出 =====
+    - name: 验证时间变量
+      run: |
+        echo "当前系统时间: $(date)"
+        echo "格式化时间变量: ${{ env.FULL_TIME }}"
+        echo "状态文件内容: $(cat status)"
+
+    # ===== 自动提交 =====
     - uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        commit_message: "状态更新 [${{ env.TODAY }}]"
+        commit_message: "状态更新 [${{ env.FULL_TIME }}]"
         file_pattern: 'status'
