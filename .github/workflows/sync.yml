@@ -6,26 +6,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 完整克隆
 
-      - name: 验证Gitee账号
+      - name: 解除浅克隆限制
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: 配置Gitee认证
         env:
           GITEE_USER: ${{ secrets.GITEE_USER }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
-          # 强制小写
           USER_LOWER=$(echo "$GITEE_USER" | tr '[:upper:]' '[:lower:]')
-          
-          # 验证账号有效性
-          echo "测试账号认证..."
-          curl -sS -u $USER_LOWER:$GITEE_TOKEN https://gitee.com/api/v5/user | grep "login"
-          
-          # 验证仓库存在性
-          echo "测试仓库访问..."
-          curl -sS -I -u $USER_LOWER:$GITEE_TOKEN https://gitee.com/api/v5/repos/$USER_LOWER/autoclock | grep "200 OK"
-          
-          # 配置Git
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
           git remote add gitee "https://$USER_LOWER:$GITEE_TOKEN@gitee.com/$USER_LOWER/autoclock.git"
 
       - name: 强制推送
