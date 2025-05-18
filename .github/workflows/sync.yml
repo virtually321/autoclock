@@ -1,34 +1,16 @@
-# 可选：更复杂的同步策略
-name: Advanced Sync to Gitee
-
+name: Sync to Gitee
 on:
   push:
-    branches: 
-      - main
-      - master
-      - develop
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
-
+    branches: [main]
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: Mirror to Gitee
+    - name: Sync to Gitee
       uses: wearerequired/git-mirror-action@master
       env:
         SSH_PRIVATE_KEY: ${{ secrets.GITEE_SSH_PRIVATE_KEY }}
       with:
-        source-repo: 'git@github.com:${{ github.repository }}.git'
-        destination-repo: 'git@gitee.com:${{ secrets.GITEE_USERNAME }}/${{ secrets.GITEE_REPO }}.git'
-
-    - name: Sync README and Description
-      run: |
-        # 同步 README
-        curl -X POST https://gitee.com/api/v5/repos/${{ secrets.GITEE_USERNAME }}/${{ secrets.GITEE_REPO }}/branches
+        source-repo: "git@github.com:你的GitHub用户名/仓库名.git"
+        destination-repo: "git@gitee.com:你的Gitee用户名/仓库名.git"
