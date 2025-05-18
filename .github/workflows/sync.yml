@@ -1,18 +1,25 @@
 name: Sync to Gitee
-on: [push]  # 每当GitHub有推送时触发
+on: [push]
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-    - name: 检出代码
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: 配置Gitee账号
-      run: |
-        git config --global user.name "GitHub Sync Bot"
-        git config --global user.email "bot@example.com"
-        git remote add gitee https://${{ secrets.GITEE_USER }}:${{ secrets.GITEE_TOKEN }}@gitee.com/${{ secrets.GITEE_USER }}/autoclock.git
+      - name: 配置Gitee认证
+        env:
+          GITEE_USER: ${{ secrets.GITEE_USER }}  # 自动读取virtually
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          # 强制用户名小写（防止意外大写）
+          GITEE_USER_LOWER=$(echo "$GITEE_USER" | tr '[:upper:]' '[:lower:]')
+          
+          # 配置仓库地址（注意替换autoclock为你的仓库名）
+          git remote add gitee "https://${GITEE_USER_LOWER}:${GITEE_TOKEN}@gitee.com/${GITEE_USER_LOWER}/autoclock.git"
+          
+          # 调试命令：显示配置信息
+          echo "仓库URL：https://${GITEE_USER_LOWER}:***@gitee.com/${GITEE_USER_LOWER}/autoclock.git"
 
-    - name: 推送代码到Gitee
-      run: git push --force gitee HEAD:main
+      - name: 推送代码到Gitee
+        run: git push --force gitee HEAD:main
