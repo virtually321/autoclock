@@ -7,19 +7,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 配置Gitee认证
+      - name: 验证Gitee账号
         env:
-          GITEE_USER: ${{ secrets.GITEE_USER }}  # 自动读取virtually
+          GITEE_USER: ${{ secrets.GITEE_USER }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
-          # 强制用户名小写（防止意外大写）
-          GITEE_USER_LOWER=$(echo "$GITEE_USER" | tr '[:upper:]' '[:lower:]')
+          # 强制小写
+          USER_LOWER=$(echo "$GITEE_USER" | tr '[:upper:]' '[:lower:]')
           
-          # 配置仓库地址（注意替换autoclock为你的仓库名）
-          git remote add gitee "https://${GITEE_USER_LOWER}:${GITEE_TOKEN}@gitee.com/${GITEE_USER_LOWER}/autoclock.git"
+          # 验证账号有效性
+          echo "测试账号认证..."
+          curl -sS -u $USER_LOWER:$GITEE_TOKEN https://gitee.com/api/v5/user | grep "login"
           
-          # 调试命令：显示配置信息
-          echo "仓库URL：https://${GITEE_USER_LOWER}:***@gitee.com/${GITEE_USER_LOWER}/autoclock.git"
+          # 验证仓库存在性
+          echo "测试仓库访问..."
+          curl -sS -I -u $USER_LOWER:$GITEE_TOKEN https://gitee.com/api/v5/repos/$USER_LOWER/autoclock | grep "200 OK"
+          
+          # 配置Git
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git remote add gitee "https://$USER_LOWER:$GITEE_TOKEN@gitee.com/$USER_LOWER/autoclock.git"
 
-      - name: 推送代码到Gitee
+      - name: 强制推送
         run: git push --force gitee HEAD:main
