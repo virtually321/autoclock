@@ -1,32 +1,42 @@
-name: 智能打卡系统
-on: 
-  schedule: 
-    - cron: '0 0,8 * * *'  # 每天早8点,16点自动运行（北京时间）
-  push:                   # 文件修改实时生效
+name: 精准状态生成
+on:
+  schedule:
+    - cron: '0 21 * * *'  # 北京时间05:00
+  push:
+    paths:
+      - 'duty'
+      - 'leave'
 
 jobs:
-  check:
+  status-generator:
     runs-on: ubuntu-latest
     env:
-      TZ: Asia/Shanghai   # 中国时区
+      TZ: Asia/Shanghai
     steps:
     - uses: actions/checkout@v4
-    
+
+    # ===== 精准核心逻辑 =====
     - name: 生成状态
       run: |
-        # 获取今日日期
-        TODAY=$(date +"%Y-%m-%d")
+        TODAY=$(date +"%F")
+        TEMP_FILE=$(mktemp)
         
-        # 检查特殊日期（最高优先级）
-        if grep -q "^$TODAY$" duty || grep -q "^$TODAY$" leave; then
-          echo 1 > status
-          exit 0
+        # 文件优先策略
+        if grep -m1 -q "^$TODAY$" duty; then
+          echo 1 > $TEMP_FILE
+        elif grep -m1 -q "^$TODAY$" leave; then
+          echo 0 > $TEMP_FILE
+        else
+          # 直接使用API返回值
+          curl -fsS --max-time 5 "https://yasumi.neko7ina.com/" > $TEMP_FILE
+          grep -qE '^[01]$' $TEMP_FILE || cp status $TEMP_FILE
         fi
 
-        # 调用节假日接口
-        RESULT=$(curl -s "https://yasumi.neko7ina.com/")
-        echo $RESULT > status  # 直接传递接口值
+        # 原子替换
+        mv $TEMP_FILE status
 
+    # ===== 安全提交 =====
     - uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        commit_message: "系统自动更新"
+        commit_message: "状态更新 [${{ env.TODAY }}]"
+        file_pattern: 'status'
