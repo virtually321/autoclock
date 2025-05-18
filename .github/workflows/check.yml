@@ -1,4 +1,4 @@
-name: 精准状态监控
+name: 精简状态监控系统
 on:
   schedule:
     - cron: '0 21 * * *'  # 北京时间05:00触发
@@ -10,56 +10,33 @@ on:
 jobs:
   status-tracker:
     runs-on: ubuntu-latest
-    env:
-      TZ: Asia/Shanghai
     steps:
     # ===== 1. 代码检出 =====
     - uses: actions/checkout@v4
       with:
         persist-credentials: false
 
-    # ===== 2. 时间生成 =====
-    - name: 生成时间戳
-      id: timestamp
-      run: |
-        # 生成紧凑时间格式(月-日 时:分)
-        SHORT_TIME=$(TZ='Asia/Shanghai' date +'%m-%d %H:%M')
-        echo "生成时间：$SHORT_TIME" | tee time.log
-        echo "SHORT_TIME=$SHORT_TIME" >> $GITHUB_ENV
-
-    # ===== 3. 状态生成 =====
+    # ===== 2. 状态生成 =====
     - name: 生成状态文件
       run: |
+        # 精简版状态获取逻辑
         TEMP_FILE=$(mktemp)
         trap 'rm -f "$TEMP_FILE"' EXIT
 
-        # 带智能重试的网络请求
-        curl -fsS \
-          --retry 3 \
-          --retry-delay 2 \
-          --retry-max-time 20 \
-          --connect-timeout 5 \
-          --max-time 10 \
-          --retry-all-errors \
-          "https://yasumi.neko7ina.com/" > "$TEMP_FILE" || {
-          echo "::warning:: API请求失败，保留当前状态"
-          cp status "$TEMP_FILE" 2>/dev/null || echo 1 > "$TEMP_FILE"
-        }
-
-        # 状态格式验证
-        if ! grep -qE '^[01]$' "$TEMP_FILE"; then
-          echo "::error:: 无效状态值: $(cat "$TEMP_FILE")"
-          exit 1
+        # 带失败回退的请求
+        if ! curl -fsS --retry 3 "https://yasumi.neko7ina.com/" > "$TEMP_FILE"; then
+          echo "::notice:: 使用缓存状态"
+          [ -f status ] && cp status "$TEMP_FILE" || echo 1 > "$TEMP_FILE"
         fi
 
+        # 二进制状态验证
+        grep -qE '^[01]$' "$TEMP_FILE" || (echo "::error:: 状态值异常"; exit 1)
         mv -f "$TEMP_FILE" status
 
-    # ===== 4. 自动提交 =====
+    # ===== 3. 自动提交 =====
     - uses: stefanzweifel/git-auto-commit-action@v5
       with:
-        commit_message: "✅ 状态更新 ｜ 🕒 ${{ env.SHORT_TIME }}"  # 方案A样式
-        file_pattern: |
-          status
-          time.log
-        force: true
-        branch: ${{ github.ref }}
+        commit_message: "系统状态更新"
+        file_pattern: 'status'
+        commit_options: '--no-verify'
+        skip_dirty_check: true  # 强制提交
