@@ -1,4 +1,4 @@
-name: 🧮 自动更新状态
+name: auto_update
 
 on:
   # 支持UTC 16点 & 次日UTC5点（对应北京时间）
