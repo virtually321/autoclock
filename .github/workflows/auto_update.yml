@@ -1,44 +1,41 @@
-name: auto_update
+name: 自动更新值班状态
 
 on:
-  # 支持UTC 16点 & 次日UTC5点（对应北京时间）
   schedule:
-    - cron: '0 8 * * *'
-    - cron: '0 21 * * *'
-  workflow_dispatch:           # 支持手动调试
+    - cron: '0 8 * * *'   # UTC 8点（北京时间16点）
+    - cron: '0 21 * * *' # UTC 21点（北京时间5点）
+  workflow_dispatch:
   push:
     branches:
       - main
     paths:
-      - 'zb.txt'
-      - 'xj.txt'
-      - 'check_status.py'
+      - zb.txt
+      - xj.txt
+      - check_status.py
 
 jobs:
-  update_status:
+  validate:
     runs-on: ubuntu-latest
     steps:
-      # 1. 高级checkout + 拉取历史
-      - name: 🧾 拉取最新仓库（最大兼容）  
+      - name: 🧾 拉取代码
         uses: actions/checkout@v4
         with:
-          ref: main
-          fetch-depth: 0            # 获取完整历史（必需用于 git pull）
-          path: .                   # 主分支绝对路径
+          fetch-depth: 0
 
-      # 2. 安装 Python/Torch/Runtime
-      - name: 🧪 配置 Python 3.8 环境
+      - name: 🔧 安装Python环境
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: '3.x'
 
-      # 3. 执行脚本（输出详细日志）
-      - name: 🤖 运行状态检查逻辑
+      - name: 🔄 检查状态逻辑
         run: |
-          echo "🔍 当前目录结构："
-          ls -la
+          echo "🛠 开始执行状态判定"
+          python check_status.py || echo "⚠️ 用最后一次缓存写入或 fallback"
 
-          echo "🕑 开始运行脚本..."
-          python3 check_status.py
-
-          echo "📜
+      - name: 📡 提交 status.txt （仅当内容变化）
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: 'status.txt'
+          commit_message: '🔁 今日状态：$(cat status.txt)'
+          author: DutyBot <github-actions@github.com>
+       
