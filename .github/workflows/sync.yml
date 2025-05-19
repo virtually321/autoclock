@@ -1,11 +1,10 @@
-name: 🔁 Sync to Gitee
+name: Sync to Gitee
 on:
   push:
     branches:
       - main
     paths:
-      - "**/*"
-      - "status.txt"
+      - status.txt
 
 jobs:
   sync:
@@ -15,18 +14,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 设置 Git 提交者信息
-        run: |
+      - run: |
           git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          git config --global user.email "bot@github.com"
 
-      - name: 配置 Gitee remote 地址
-        env:
+      - env:
           GITEE_USER: ${{ secrets.GITEE_USER }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          GITEE_REPO: autoclock  # 替换为你的 Gitee 仓库名
         run: |
           USER_LOWER=$(echo "$GITEE_USER" | tr '[:upper:]' '[:lower:]')
-          git remote add gitee "https://$USER_LOWER:$GITEE_TOKEN@gitee.com/$USER_LOWER/autoclock.git" || true
+          git remote add gitee "https://$USER_LOWER:$GITEE_TOKEN@gitee.com/$USER_LOWER/$GITEE_REPO.git" || true
 
-      - name: 强制推送到 Gitee
-        run: git push --force gitee main
+      - run: git push --force gitee main  # 若 Gitee 分支为 master，改这里为 master
