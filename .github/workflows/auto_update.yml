@@ -26,7 +26,7 @@ jobs:
 import requests
 from datetime import date
 
-status_url='https://raw.githubusercontent.com/你的用户名/autoclock/main/status.txt'
+status_url='https://raw.githubusercontent.com/virtually/autoclock/main/status.txt'
 
 def update_status():
     # 这里可以自己定义获取状态的逻辑
