@@ -10,14 +10,17 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      # Step 1: 检出完整仓库（必须 fetch-depth: 0）
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # Step 2: 设置 Git 提交者信息（固定格式不用改）
       - run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "bot@github.com"
 
+      # Step 3: 添加 Gitee remote 地址（固定）
       - env:
           GITEE_USER: ${{ secrets.GITEE_USER }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
@@ -26,4 +29,6 @@ jobs:
           USER_LOWER=$(echo "$GITEE_USER" | tr '[:upper:]' '[:lower:]')
           git remote add gitee "https://$USER_LOWER:$GITEE_TOKEN@gitee.com/$USER_LOWER/$GITEE_REPO.git" || true
 
-      - run: git push --force gitee main  # 若 Gitee 分支为 master，改这里为 master
+      # Step 4: 推送 Git 到 Gitee（注意分支名）
+      - run: |
+          git push --force gitee main
