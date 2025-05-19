@@ -18,9 +18,9 @@ jobs:
         with:
           python-version: '3.8'
 
-      - name: Run check_and_update.py
+      - name: Run check_status.py
         run: |
-          python3 check_and_update.py
+          python3 check_status.py
 
       - name: Commit and push changes
         run: |
