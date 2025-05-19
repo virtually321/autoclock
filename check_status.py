@@ -1,10 +1,9 @@
-import requests
 from datetime import date
 
-# 配置
+# 文件路径
 zb_path = 'zb.txt'
 xj_path = 'xj.txt'
-status_url = 'https://raw.githubusercontent.com/virtually321/autoclock/main/status.txt'
+status_path = 'status.txt'
 
 def read_file(filepath):
     try:
@@ -13,31 +12,20 @@ def read_file(filepath):
     except:
         return None
 
-def get_status_from_api():
-    try:
-        r = requests.get(status_url)
-        if r.status_code == 200:
-            return int(r.text.strip())
-    except:
-        pass
-    return None
-
 def main():
     today_str = date.today().isoformat()
     zb_info = read_file(zb_path)
     xj_info = read_file(xj_path)
 
-    # 判断当天是否有信息
+    # 判断
     if zb_info == today_str or xj_info == today_str:
-        # 有信息，代表值班或休假
-        print(1)
+        new_status = '1'  # 休假或值班
     else:
-        api_status = get_status_from_api()
-        if api_status is not None:
-            print(api_status)
-        else:
-            # 默认：工作日 计算自己需求
-            print(0)
+        new_status = '0'  # 工作日
+
+    # 写入status.txt
+    with open(status_path, 'w') as f:
+        f.write(new_status)
 
 if __name__ == "__main__":
     main()
