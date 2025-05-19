@@ -39,7 +39,7 @@ def main():
 
     try:
         with open(status_path, 'w') as f:
-            f.write(status)
+            f.write(f"{status}\n")
         print(f"状态写入成功：{status_path}")
     except Exception as e:
         print(f"写入状态失败：{e}")
