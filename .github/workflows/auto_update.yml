@@ -1,8 +1,9 @@
 name: Auto Update Status
 
 on:
-  schedule:
-    - cron: '0 8 * * *'  # 每天8点执行一次，根据你的需求调整时间
+schedule:
+  - cron: '0 21 * * *'  # 每天UTC时间21点（北京时间5点）
+  - cron: '0 8 * * *'   # 每天UTC时间8点（北京时间16点）
   workflow_dispatch:    # 可以手动触发
 
 jobs:
