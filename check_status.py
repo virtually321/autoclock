@@ -4,7 +4,7 @@ from datetime import date
 # 配置
 zb_path = 'zb.txt'
 xj_path = 'xj.txt'
-status_url = 'https://raw.githubusercontent.com/你的用户名/autoclock/main/status.txt'
+status_url = 'https://raw.githubusercontent.com/virtually321/autoclock/main/status.txt'
 
 def read_file(filepath):
     try:
