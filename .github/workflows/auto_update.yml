@@ -1,31 +1,40 @@
-name: Auto Update Status
+name: 自动更新值班状态
 
 on:
   schedule:
-    - cron: '0 21 * * *'  # 北京时间5点（UTC 21点）
-    - cron: '0 8 * * *'   # 北京时间16点（UTC 8点）
-  workflow_dispatch:      # 支持手动触发
+    - cron: '0 8 * * *'           # UTC0 8点 = 北京时间16点
+    - cron: '0 21 * * *'          # UTC0 21点 = 北京时间5点
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'zb.txt'
+      - 'xj.txt'
+      - 'check_status.py'         # 脚本有更新则CI重置
 
 jobs:
   update_status:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: 拉取代码
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v3
+      - name: 设置 Python 3.8 环境
+        uses: actions/setup-python@v4
         with:
           python-version: '3.8'
 
-      - name: Run check_status.py
+      - name: 执行状态更新脚本
         run: |
           python3 check_status.py
 
-      - name: Commit and push changes
+      - name: 提交status变更（若存在）
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "🔁 status 更新：$(cat status.txt)"
+          file_pattern: status.txt
+
+      - name: 调试——输出当前status值
+        if: always()
         run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'actions@github.com'
-          git add status.txt
-          git commit -m "Auto-update status" || echo "No changes to commit"
-          git push
+          cat status.txt
