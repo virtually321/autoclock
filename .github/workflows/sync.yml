@@ -1,5 +1,11 @@
-name: Sync to Gitee
-on: [push]
+name: 🔁 Sync to Gitee
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*"
+      - "status.txt"
 
 jobs:
   sync:
@@ -7,20 +13,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 完整克隆
+          fetch-depth: 0
 
-      - name: 解除浅克隆限制
+      - name: 设置 Git 提交者信息
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
 
-      - name: 配置Gitee认证
+      - name: 配置 Gitee remote 地址
         env:
           GITEE_USER: ${{ secrets.GITEE_USER }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         run: |
           USER_LOWER=$(echo "$GITEE_USER" | tr '[:upper:]' '[:lower:]')
-          git remote add gitee "https://$USER_LOWER:$GITEE_TOKEN@gitee.com/$USER_LOWER/autoclock.git"
+          git remote add gitee "https://$USER_LOWER:$GITEE_TOKEN@gitee.com/$USER_LOWER/autoclock.git" || true
 
-      - name: 强制推送
-        run: git push --force gitee HEAD:main
+      - name: 强制推送到 Gitee
+        run: git push --force gitee main
