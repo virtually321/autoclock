@@ -3,7 +3,7 @@ name: 自动更新值班状态
 on:
   schedule:
     - cron: '0 8 * * *'   # UTC 8点（北京时间16点）
-    - cron: '0 21 * * *' # UTC 21点（北京时间5点）
+    - cron: '0 21 * * *'  # UTC 21点（北京时间5点）
   workflow_dispatch:
   push:
     branches:
@@ -32,10 +32,9 @@ jobs:
           echo "🛠 开始执行状态判定"
           python check_status.py || echo "⚠️ 用最后一次缓存写入或 fallback"
 
-      - name: 📡 提交 status.txt （仅当内容变化）
+      - name: 📡 提交 index.html （仅当内容变化）
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          file_pattern: 'status.txt'
-          commit_message: '🔁 今日状态：$(cat status.txt)'
+          file_pattern: 'index.html'  # 修改为 index.html
+          commit_message: '🔁 今日状态：$(cat index.html)'
           author: DutyBot <github-actions@github.com>
-       
