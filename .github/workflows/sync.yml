@@ -21,6 +21,10 @@ jobs:
         run: |
           USER_LOWER=$(echo "$GITEE_USER" | tr '[:upper:]' '[:lower:]')
           git remote add gitee "https://$USER_LOWER:$GITEE_TOKEN@gitee.com/$USER_LOWER/autoclock.git"
+          git remote -v  # 打印远程仓库 URL
+
+      - name: 拉取最新代码
+        run: git pull origin main
 
       - name: 检查 index.html 是否有更新
         id: check_index
@@ -35,4 +39,6 @@ jobs:
 
       - name: 强制推送
         if: steps.check_index.outputs.has_changes == 'true'
-        run: git push --force gitee HEAD:main
+        run: |
+          git push --force gitee HEAD:main
+          echo "推送完成"
