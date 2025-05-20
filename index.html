@@ -1,28 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Status</title>
-</head>
-<body>
-    <div id="status-content">
-        <!-- Status.txt内容将在这里显示 -->
-    </div>
-
-    <script>
-        async function loadStatus() {
-            try {
-                const response = await fetch('/status.txt');
-                const text = await response.text();
-                document.getElementById('status-content').innerText = text;
-            } catch (error) {
-                document.getElementById('status-content').innerText = 'Failed to load status.txt';
-            }
-        }
-
-        // 页面加载完成后调用函数
-        window.onload = loadStatus;
-    </script>
-</body>
-</html>
+<meta charset="UTF-8">
+<title>Status</title>
+<div id="s"></div>
+<script>
+fetch('/status.txt')
+  .then(r => r.text())
+  .then(t => s.textContent = t)
+  .catch(e => s.textContent = 'Error loading status');
+</script>
