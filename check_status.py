@@ -5,7 +5,7 @@ from datetime import date
 base_dir = os.path.dirname(os.path.abspath(__file__))
 zb_path = os.path.join(base_dir, 'zb.txt')
 xj_path = os.path.join(base_dir, 'xj.txt')
-status_path = os.path.join(base_dir, 'status.txt')
+index_path = os.path.join(base_dir, 'index.html')  # 直接写入 index.html
 
 def read_file(filepath):
     try:
@@ -14,6 +14,14 @@ def read_file(filepath):
     except Exception as e:
         print(f"读取文件{filepath}失败：{e}")
         return ""
+
+def write_to_index(content):
+    try:
+        with open(index_path, 'w') as f:
+            f.write(content)
+        print(f"内容写入成功：{index_path}")
+    except Exception as e:
+        print(f"写入内容失败：{e}")
 
 def main():
     today_str = date.today().isoformat()
@@ -37,12 +45,8 @@ def main():
 
     print(f"今日状态为：{status}")
 
-    try:
-        with open(status_path, 'w') as f:
-            f.write(f"{status}\n")
-        print(f"状态写入成功：{status_path}")
-    except Exception as e:
-        print(f"写入状态失败：{e}")
+    # 将状态值写入 index.html
+    write_to_index(status)
 
 if __name__ == '__main__':
     main()
