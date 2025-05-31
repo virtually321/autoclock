@@ -1,6 +1,11 @@
 import os
-from datetime import date
+from datetime import datetime, timezone, timedelta
 import tempfile
+import time  # 新增导入
+
+# 强制设置时区为北京时间（关键修改）
+os.environ['TZ'] = 'Asia/Shanghai'
+time.tzset()  # 立即生效
 
 # 基础路径，确保和脚本在同一目录
 base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,10 +40,18 @@ def atomic_write(filepath, content):
     except Exception as e:
         print(f"写入文件 {filepath} 失败：{e}")
 
+def get_beijing_date():
+    """获取当前北京时间（日期部分）"""
+    # 显式创建北京时区对象
+    beijing_tz = timezone(timedelta(hours=8), 'Asia/Shanghai')
+    # 获取带时区的当前时间
+    now = datetime.now(beijing_tz)
+    return now.date().isoformat()
+
 def main():
-    # 当前日期字符串
-    today_str = date.today().isoformat()
-    print(f"开始检测日期：{today_str}")
+    # 获取当前北京时间（关键修改）
+    today_str = get_beijing_date()
+    print(f"开始检测日期（北京时间）：{today_str}")
 
     # 读取两份日期文件
     zb_content = read_file(zb_path)
